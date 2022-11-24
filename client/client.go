@@ -223,13 +223,16 @@ func testIdleStateOfProcess(logfilePrefix string, logfilePostfix string, pid uin
 // HTTP Burst test barrage
 func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, isHttps bool) {
 	serverProtocol := ""
+	testNameForFile := ""
 	if isHttps {
 		serverProtocol = "https://"
+		testNameForFile = "-httpsBurstTest"
 	} else {
 		serverProtocol = "http://"
+		testNameForFile = "-httpsBurstTest"
 	}
 	url := fmt.Sprintf("%s%s:%d/download/100000", serverProtocol, serverHost, serverPort)
-	filename := testResultsDirectory + logfilePrefix + "-burstTest" + logfilePostfix + ".csv"
+	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
 		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU/100 (%)", "average RAM (MB)"}) // todo: log CPU and RAM too
 		for i := 0; i < countTestsToRun; i++ {
@@ -254,13 +257,16 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 // HTTP Rate test barrage
 func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint, isHttps bool) {
 	serverProtocol := ""
+	testNameForFile := ""
 	if isHttps {
 		serverProtocol = "https://"
+		testNameForFile = "-httpsRateTest"
 	} else {
 		serverProtocol = "http://"
+		testNameForFile = "-httpsRateTest"
 	}
 	url := fmt.Sprintf("%s%s:%d/download/1000", serverProtocol, serverHost, serverPort)
-	filename := testResultsDirectory + logfilePrefix + "-rateTest" + logfilePostfix + ".csv"
+	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
 		w.Write([]string{"requests per second", "test duration (ms)", "average CPU/100 (%)", "average RAM (MB)", "failure rate (%)"})
 
