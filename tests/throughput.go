@@ -16,8 +16,8 @@ import (
 const chunkSize = 10000000
 const countBytesTransfer = 100000000 // 100MB
 
-func DownloadThroughputTest(serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
-	url := fmt.Sprintf("http://%s:%d/download/%d", serverHost, serverPort, countBytesTransfer)
+func DownloadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
+	url := fmt.Sprintf("%s%s:%d/download/%d", serverProtocol, serverHost, serverPort, countBytesTransfer)
 	resp, err := http.Get(url)
 	if err == nil {
 		defer resp.Body.Close()
@@ -41,8 +41,8 @@ func DownloadThroughputTest(serverHost string, serverPort uint, pid uint) (model
 	return model.ThroughputTest{Type: model.RX, CountBytesTransferred: countBytesTransferred, DurationNanoseconds: uint64(dt.Nanoseconds()), CpuAndRam: *cpuAndRam}, nil
 }
 
-func UploadThroughputTest(serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
-	url := fmt.Sprintf("http://%s:%d/upload", serverHost, serverPort)
+func UploadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
+	url := fmt.Sprintf("%s%s:%d/upload", serverProtocol, serverHost, serverPort)
 	countBytesToSend := countBytesTransfer
 	var tStart time.Time
 	var tStop time.Time

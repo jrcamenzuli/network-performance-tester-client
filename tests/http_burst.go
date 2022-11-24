@@ -11,12 +11,18 @@ import (
 	"github.com/jrcamenzuli/network-performance-tester-client/util"
 )
 
-func HttpBurstTest(url string, burstSize int, pid uint) model.BurstTest {
+func HttpBurstTest(url string, burstSize int, pid uint, isHttps bool) model.BurstTest {
+	protocol := ""
+	if isHttps {
+		protocol = "HTTPS"
+	} else {
+		protocol = "HTTP"
+	}
 	countRequests := 0
 	countResponses := 0
 	var wg sync.WaitGroup
 
-	fmt.Printf("Sending a burst of %d HTTP requests to %s\n", burstSize, url)
+	fmt.Printf("Sending a burst of %d %s requests to %s\n", burstSize, protocol, url)
 	tStart := time.Now()
 	for i := 0; i <= burstSize; i++ {
 		wg.Add(1)

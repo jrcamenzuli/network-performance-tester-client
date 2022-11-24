@@ -56,13 +56,25 @@ func RunClient(config *types.Configuration) {
 	}
 
 	if config.Client.Tests.HTTP_Throughput.Enable {
-		fmt.Println("Starting Throughput Test")
+		fmt.Println("Starting HTTP Throughput Test")
 		testHTTP_Throughput(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTP_Port,
-			config.Client.PID)
+			config.Client.PID,
+			false)
+	}
+
+	if config.Client.Tests.HTTP_Throughput.Enable {
+		fmt.Println("Starting HTTPS Throughput Test")
+		testHTTP_Throughput(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerTCP_HTTPS_Port,
+			config.Client.PID,
+			true)
 	}
 
 	if config.Client.Tests.Ping.Enable {
@@ -93,7 +105,20 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTP_Port,
 			10, // countTestsToRun
-			func(i int) int { return (i + 1) * 10 }, config.Client.PID)
+			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
+			false)
+	}
+
+	if config.Client.Tests.HTTP_Burst.Enable {
+		fmt.Println("Starting HTTPS Burst Test")
+		testHTTP_Burst(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerTCP_HTTPS_Port,
+			10, // countTestsToRun
+			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
+			true)
 	}
 
 	if config.Client.Tests.HTTP_Rate.Enable {
@@ -107,7 +132,22 @@ func RunClient(config *types.Configuration) {
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.HTTP_Rate.Duration), // testDuration
-			config.Client.PID)
+			config.Client.PID,
+			false)
+	}
+	if config.Client.Tests.HTTP_Rate.Enable {
+		fmt.Println("Starting HTTPS Rate Test")
+		testHTTP_Rate(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerTCP_HTTPS_Port,
+			time.Second*1, // restDuration
+			5,             // countTestsToRun
+			func(i int) int { return (i + 1) * 10 },
+			time.Second*time.Duration(config.Client.Tests.HTTP_Rate.Duration), // testDuration
+			config.Client.PID,
+			true)
 	}
 }
 
@@ -181,14 +221,20 @@ func testIdleStateOfProcess(logfilePrefix string, logfilePostfix string, pid uin
 }
 
 // HTTP Burst test barrage
-func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint) {
-	url := fmt.Sprintf("http://%s:%d/download/100000", serverHost, serverPort)
+func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, isHttps bool) {
+	serverProtocol := ""
+	if isHttps {
+		serverProtocol = "https://"
+	} else {
+		serverProtocol = "http://"
+	}
+	url := fmt.Sprintf("%s%s:%d/download/100000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + "-burstTest" + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
 		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU/100 (%)", "average RAM (MB)"}) // todo: log CPU and RAM too
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
-			result := tests.HttpBurstTest(url, burstSize, pid)
+			result := tests.HttpBurstTest(url, burstSize, pid, isHttps)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
 			var cpu, ram string
 			if result.CpuAndRam.Ram != 0 {
@@ -206,15 +252,21 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 }
 
 // HTTP Rate test barrage
-func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint) {
-	url := fmt.Sprintf("http://%s:%d/download/1000", serverHost, serverPort)
+func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint, isHttps bool) {
+	serverProtocol := ""
+	if isHttps {
+		serverProtocol = "https://"
+	} else {
+		serverProtocol = "http://"
+	}
+	url := fmt.Sprintf("%s%s:%d/download/1000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + "-rateTest" + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
 		w.Write([]string{"requests per second", "test duration (ms)", "average CPU/100 (%)", "average RAM (MB)", "failure rate (%)"})
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)
-			result := tests.HttpRateTest(url, testDuration, requestsPerSecond, pid)
+			result := tests.HttpRateTest(url, testDuration, requestsPerSecond, pid, isHttps)
 			var cpu, ram string
 			if result.CpuAndRam.Ram != 0 {
 				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
@@ -229,13 +281,22 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 	fmt.Printf("\n")
 }
 
-func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, pid uint) {
+func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, pid uint, isHttps bool) {
+	serverProtocol := ""
+	testNameForFile := ""
+	if isHttps {
+		serverProtocol = "https://"
+		testNameForFile = "-httpThroughputTest"
+	} else {
+		serverProtocol = "http://"
+		testNameForFile = "-httpsThroughputTest"
+	}
 	fmt.Printf("Half Duplex Throughput:\n")
-	filename := testResultsDirectory + logfilePrefix + "-throughputTest" + logfilePostfix + ".csv"
+	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
 		w.Write([]string{"transfer mode (half/full duplex)", "bytes transferred (MB)", "duration (ms)", "transfer rate (MB/s)", "transfer rate (Mb/s)", "average CPU (%)", "average RAM (MB)"})
 
-		uploadThroughputTestResult, _ := tests.UploadThroughputTest(serverHost, serverPort, pid)
+		uploadThroughputTestResult, _ := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid)
 		Bps := float64(uploadThroughputTestResult.CountBytesTransferred) / (float64(uploadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps := Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", uploadThroughputTestResult.Type, float64(uploadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
@@ -253,7 +314,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		w.Write([]string{transferMode, bytes_MB, duration_ms, rate_MBps, rate_Mbps, cpu, ram})
 		w.Flush()
 
-		downloadThroughputTestResult, _ := tests.DownloadThroughputTest(serverHost, serverPort, pid)
+		downloadThroughputTestResult, _ := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid)
 		Bps = float64(downloadThroughputTestResult.CountBytesTransferred) / (float64(downloadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps = Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", downloadThroughputTestResult.Type, float64(downloadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
@@ -279,7 +340,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.DownloadThroughputTest(serverHost, serverPort, pid)
+			result, err := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid)
 			result.Type = model.RX_FullDuplex
 			if err != nil {
 				errors <- err
@@ -290,7 +351,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.UploadThroughputTest(serverHost, serverPort, pid)
+			result, err := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid)
 			result.Type = model.TX_FullDuplex
 			if err != nil {
 				errors <- err
