@@ -21,13 +21,23 @@ type Configuration struct {
 			HTTP_Burst struct {
 				Enable bool `yaml:"enable"`
 			} `yaml:"http_burst"`
+			HTTPS_Burst struct {
+				Enable bool `yaml:"enable"`
+			} `yaml:"https_burst"`
 			HTTP_Rate struct {
 				Enable   bool `yaml:"enable"`
 				Duration uint `yaml:"duration"`
 			} `yaml:"http_rate"`
+			HTTPS_Rate struct {
+				Enable   bool `yaml:"enable"`
+				Duration uint `yaml:"duration"`
+			} `yaml:"https_rate"`
 			HTTP_Throughput struct {
 				Enable bool `yaml:"enable"`
 			} `yaml:"http_throughput"`
+			HTTPS_Throughput struct {
+				Enable bool `yaml:"enable"`
+			} `yaml:"https_throughput"`
 			Ping struct {
 				Enable       bool `yaml:"enable"`
 				CountSamples uint `yaml:"countSamples"`

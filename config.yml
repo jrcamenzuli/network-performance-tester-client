@@ -17,6 +17,8 @@ client:
       enable: true
     http_throughput:
       enable: true
+    https_throughput:
+      enable: true
     ping:
       enable: true
       countSamples: 100
@@ -25,6 +27,11 @@ client:
       countDifferences: 100
     http_burst:
       enable: true
+    https_burst:
+      enable: true
     http_rate:
+      enable: true
+      duration: 10
+    https_rate:
       enable: true
       duration: 10

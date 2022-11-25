@@ -66,7 +66,7 @@ func RunClient(config *types.Configuration) {
 			false)
 	}
 
-	if config.Client.Tests.HTTP_Throughput.Enable {
+	if config.Client.Tests.HTTPS_Throughput.Enable {
 		fmt.Println("Starting HTTPS Throughput Test")
 		testHTTP_Throughput(
 			logfilePrefix,
@@ -109,7 +109,7 @@ func RunClient(config *types.Configuration) {
 			false)
 	}
 
-	if config.Client.Tests.HTTP_Burst.Enable {
+	if config.Client.Tests.HTTPS_Burst.Enable {
 		fmt.Println("Starting HTTPS Burst Test")
 		testHTTP_Burst(
 			logfilePrefix,
@@ -135,7 +135,7 @@ func RunClient(config *types.Configuration) {
 			config.Client.PID,
 			false)
 	}
-	if config.Client.Tests.HTTP_Rate.Enable {
+	if config.Client.Tests.HTTPS_Rate.Enable {
 		fmt.Println("Starting HTTPS Rate Test")
 		testHTTP_Rate(
 			logfilePrefix,
@@ -145,7 +145,7 @@ func RunClient(config *types.Configuration) {
 			time.Second*1, // restDuration
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
-			time.Second*time.Duration(config.Client.Tests.HTTP_Rate.Duration), // testDuration
+			time.Second*time.Duration(config.Client.Tests.HTTPS_Rate.Duration), // testDuration
 			config.Client.PID,
 			true)
 	}
