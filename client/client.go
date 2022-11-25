@@ -229,7 +229,7 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 		testNameForFile = "-httpsBurstTest"
 	} else {
 		serverProtocol = "http://"
-		testNameForFile = "-httpsBurstTest"
+		testNameForFile = "-httpBurstTest"
 	}
 	url := fmt.Sprintf("%s%s:%d/download/100000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
@@ -263,7 +263,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 		testNameForFile = "-httpsRateTest"
 	} else {
 		serverProtocol = "http://"
-		testNameForFile = "-httpsRateTest"
+		testNameForFile = "-httpRateTest"
 	}
 	url := fmt.Sprintf("%s%s:%d/download/1000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
