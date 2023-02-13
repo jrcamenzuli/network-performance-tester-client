@@ -190,7 +190,7 @@ func testIdleStateOfDevice(logfilePrefix string, logfilePostfix string) {
 	cpuUsage := tests.IdleStateOfDevice()
 	fmt.Printf("Idle state of device: CPU %.2f%%\n", cpuUsage*100.0)
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"CPU/100 (%)"})
+		w.Write([]string{"CPU (%)"})
 		cpu := fmt.Sprintf("%.4f%%", cpuUsage)
 		w.Write([]string{cpu})
 	}
@@ -234,7 +234,7 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 	url := fmt.Sprintf("%s%s:%d/download/100000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU/100 (%)", "average RAM (MB)"}) // todo: log CPU and RAM too
+		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"}) // todo: log CPU and RAM too
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
 			result := tests.HttpBurstTest(url, burstSize, pid, isHttps)
@@ -268,7 +268,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 	url := fmt.Sprintf("%s%s:%d/download/1000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"requests per second", "test duration (ms)", "average CPU/100 (%)", "average RAM (MB)", "failure rate (%)"})
+		w.Write([]string{"requests per second", "test duration (ms)", "average CPU (%)", "average RAM (MB)", "failure rate (%)"})
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)

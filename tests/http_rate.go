@@ -89,7 +89,7 @@ func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSeco
 		}
 		previous_error = error_
 
-		// fmt.Printf("desiredRequestsPerSecond:%d, averageActualRequestsPerSecond:%f, output:%f\n", desiredRequestsPerSecond, averageActualRequestsPerSecond, output)
+		fmt.Printf("desiredRequestsPerSecond:%d, averageActualRequestsPerSecond:%f, output:%f\n", desiredRequestsPerSecond, averageActualRequestsPerSecond, output)
 		time.Sleep(time.Duration(1.0/float64(desiredRequestsPerSecond)*float64(time.Second)) + time.Duration(output*float64(time.Second)))
 	}
 
