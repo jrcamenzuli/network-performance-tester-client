@@ -268,7 +268,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 	url := fmt.Sprintf("%s%s:%d/download/1000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"requests per second", "test duration (ms)", "average CPU (%)", "average RAM (MB)", "failure rate (%)"})
+		w.Write([]string{"requests per second", "test duration (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)
@@ -279,7 +279,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
 			}
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
-			w.Write([]string{strconv.Itoa(requestsPerSecond), strconv.Itoa(int(testDuration.Milliseconds())), cpu, ram, failureRate})
+			w.Write([]string{strconv.Itoa(requestsPerSecond), strconv.Itoa(int(testDuration.Milliseconds())), failureRate, cpu, ram})
 			w.Flush()
 		}
 	}
@@ -418,7 +418,7 @@ func testPing(logfilePrefix string, logfilePostfix string, serverHost string, se
 		}
 		averagePingMicroSeconds /= float64(countSamples)
 		fmt.Printf("Average Ping: %.3fms\n", averagePingMicroSeconds/1000.0)
-		averagePingMicroSecondsString := fmt.Sprintf("%.3fms", averagePingMicroSeconds/1000.0)
+		averagePingMicroSecondsString := fmt.Sprintf("%.3f", averagePingMicroSeconds/1000.0)
 		w.Write([]string{averagePingMicroSecondsString})
 		w.Flush()
 	}
@@ -429,7 +429,7 @@ func testPing(logfilePrefix string, logfilePostfix string, serverHost string, se
 func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countDifferences uint) {
 	filename := testResultsDirectory + logfilePrefix + "-jitterTest" + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"Average Jitter (ms)"})
+		w.Write([]string{"average jitter (ms)"})
 		address := fmt.Sprintf("%s:%d", serverHost, serverPort)
 		conn, err := net.Dial("udp", address)
 		defer conn.Close()
@@ -451,7 +451,7 @@ func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, 
 		}
 		averagePingMicroSeconds /= float64(countDifferences)
 		fmt.Printf("Average Jitter: %.3fms\n", averagePingMicroSeconds/1000.0)
-		averagePingMicroSecondsString := fmt.Sprintf("%.3fms", averagePingMicroSeconds/1000.0)
+		averagePingMicroSecondsString := fmt.Sprintf("%.3f", averagePingMicroSeconds/1000.0)
 		w.Write([]string{averagePingMicroSecondsString})
 		w.Flush()
 	}
