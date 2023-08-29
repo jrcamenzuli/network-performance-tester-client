@@ -149,6 +149,56 @@ func RunClient(config *types.Configuration) {
 			config.Client.PID,
 			true)
 	}
+	if config.Client.Tests.DNS_UDP_Burst.Enable {
+		fmt.Println("Starting DNS over UDP Burst Test")
+		testDNS_Burst(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerUDP_DNS_Port,
+			10, // countTestsToRun
+			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
+			"udp")
+	}
+	if config.Client.Tests.DNS_TCP_Burst.Enable {
+		fmt.Println("Starting DNS over TCP Burst Test")
+		testDNS_Burst(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerTCP_DNS_Port,
+			10, // countTestsToRun
+			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
+			"tcp")
+	}
+	if config.Client.Tests.DNS_UDP_Rate.Enable {
+		fmt.Println("Starting DNS over UDP Rate Test")
+		testDNS_Rate(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerUDP_DNS_Port,
+			time.Second*1, // restDuration
+			5,             // countTestsToRun
+			func(i int) int { return (i + 1) * 10 },
+			time.Second*time.Duration(config.Client.Tests.DNS_UDP_Rate.Duration), // testDuration
+			config.Client.PID,
+			"udp")
+	}
+	if config.Client.Tests.DNS_TCP_Rate.Enable {
+		fmt.Println("Starting DNS over UDP Rate Test")
+		testDNS_Rate(
+			logfilePrefix,
+			config.Client.LogfilePostfix,
+			config.Client.ServerHost,
+			config.Client.ServerTCP_DNS_Port,
+			time.Second*1, // restDuration
+			5,             // countTestsToRun
+			func(i int) int { return (i + 1) * 10 },
+			time.Second*time.Duration(config.Client.Tests.DNS_TCP_Rate.Duration), // testDuration
+			config.Client.PID,
+			"tcp")
+	}
 }
 
 func logConfigInfo(logfilePrefix string, config *types.Configuration) {
@@ -454,6 +504,67 @@ func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, 
 		averagePingMicroSecondsString := fmt.Sprintf("%.3f", averagePingMicroSeconds/1000.0)
 		w.Write([]string{averagePingMicroSecondsString})
 		w.Flush()
+	}
+	createLogFile(filename, contents)
+	fmt.Printf("\n")
+}
+
+func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, transportProtocol string) {
+	url := fmt.Sprintf("test.service")
+	testNameForFile := ""
+	switch transportProtocol {
+	case "udp":
+		testNameForFile = "-dnsUdpBurstTest"
+	case "tcp":
+		testNameForFile = "-dnsTcpBurstTest"
+	}
+	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
+	contents := func(w *csv.Writer) {
+		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
+		for i := 0; i < countTestsToRun; i++ {
+			burstSize := fn(i)
+			result := tests.DnsBurstTest(url, burstSize, pid, serverHost, serverPort, transportProtocol)
+			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
+			var cpu, ram string
+			if result.CpuAndRam.Ram != 0 {
+				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
+				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
+			}
+			if err := w.Write([]string{strconv.Itoa(burstSize), strconv.Itoa(int(result.Duration.Milliseconds())), failureRate, cpu, ram}); err != nil {
+				log.Fatalln("error writing record to file", err)
+			}
+			w.Flush()
+		}
+	}
+	createLogFile(filename, contents)
+	fmt.Printf("\n")
+}
+
+func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint, transportProtocol string) {
+	url := fmt.Sprintf("test.service")
+	testNameForFile := ""
+	switch transportProtocol {
+	case "udp":
+		testNameForFile = "-dnsUdpRateTest"
+	case "tcp":
+		testNameForFile = "-dnsTcpRateTest"
+	}
+	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
+	contents := func(w *csv.Writer) {
+		w.Write([]string{"requests per second", "test duration (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
+
+		for i := 0; i < countTestsToRun; i++ {
+			requestsPerSecond := fn(i)
+			result := tests.DnsRateTest(url, testDuration, requestsPerSecond, pid, serverHost, serverPort, transportProtocol)
+			var cpu, ram string
+			if result.CpuAndRam.Ram != 0 {
+				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
+				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
+			}
+			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
+			w.Write([]string{strconv.Itoa(requestsPerSecond), strconv.Itoa(int(testDuration.Milliseconds())), failureRate, cpu, ram})
+			w.Flush()
+		}
 	}
 	createLogFile(filename, contents)
 	fmt.Printf("\n")
