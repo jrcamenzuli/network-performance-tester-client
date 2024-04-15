@@ -342,10 +342,10 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 	testNameForFile := ""
 	if isHttps {
 		serverProtocol = "https://"
-		testNameForFile = "-httpThroughputTest"
+		testNameForFile = "-httpsThroughputTest"
 	} else {
 		serverProtocol = "http://"
-		testNameForFile = "-httpsThroughputTest"
+		testNameForFile = "-httpThroughputTest"
 	}
 	fmt.Printf("Half Duplex Throughput:\n")
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
