@@ -520,7 +520,7 @@ func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost strin
 	}
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
+		w.Write([]string{"number of requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
 			result := tests.DnsBurstTest(url, burstSize, pid, serverHost, serverPort, transportProtocol)
