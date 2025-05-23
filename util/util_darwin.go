@@ -27,7 +27,7 @@ func GetCPUandRAM(pid uint) *model.CpuAndRam {
 		ram, err = strconv.ParseUint(raw[1], 10, 64)
 		return &model.CpuAndRam{Cpu: float64(cpu / 100.0), Ram: uint(ram)}
 	}
-	return nil
+	return &model.CpuAndRam{}
 }
 
 func GetSystemCPUUsage() float64 {
