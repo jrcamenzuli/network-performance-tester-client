@@ -49,10 +49,12 @@ func RunClient(config *types.Configuration) {
 
 	if config.Client.Tests.IdleStateOfDevice.Enable {
 		testIdleStateOfDevice(logfilePrefix, config.Client.LogfilePostfix)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.IdleStateOfProcess.Enable {
 		testIdleStateOfProcess(logfilePrefix, config.Client.LogfilePostfix, config.Client.PID)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.HTTP_Throughput.Enable {
@@ -64,6 +66,7 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerTCP_HTTP_Port,
 			config.Client.PID,
 			false)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.HTTPS_Throughput.Enable {
@@ -75,6 +78,7 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerTCP_HTTPS_Port,
 			config.Client.PID,
 			true)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.Ping.Enable {
@@ -85,6 +89,7 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerHost,
 			config.Client.ServerPingPort,
 			config.Client.Tests.Ping.CountSamples)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.Jitter.Enable {
@@ -95,6 +100,7 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerHost,
 			config.Client.ServerPingPort,
 			config.Client.Tests.Jitter.CountDifferences)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.HTTP_Burst.Enable {
@@ -107,6 +113,7 @@ func RunClient(config *types.Configuration) {
 			10, // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
 			false)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.HTTPS_Burst.Enable {
@@ -119,6 +126,7 @@ func RunClient(config *types.Configuration) {
 			10, // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
 			true)
+		time.Sleep(time.Second * 5)
 	}
 
 	if config.Client.Tests.HTTP_Rate.Enable {
@@ -128,12 +136,13 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTP_Port,
-			time.Second*1, // restDuration
+			time.Second*5, // restDuration
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.HTTP_Rate.Duration), // testDuration
 			config.Client.PID,
 			false)
+		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.HTTPS_Rate.Enable {
 		fmt.Println("Starting HTTPS Rate Test")
@@ -142,12 +151,13 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTPS_Port,
-			time.Second*1, // restDuration
+			time.Second*5, // restDuration
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.HTTPS_Rate.Duration), // testDuration
 			config.Client.PID,
 			true)
+		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_UDP_Burst.Enable {
 		fmt.Println("Starting DNS over UDP Burst Test")
@@ -156,9 +166,11 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerUDP_DNS_Port,
-			10, // countTestsToRun
+			time.Second*5, // restDuration
+			10,            // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
 			"udp")
+		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_TCP_Burst.Enable {
 		fmt.Println("Starting DNS over TCP Burst Test")
@@ -167,9 +179,11 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_DNS_Port,
-			10, // countTestsToRun
+			time.Second*5, // restDuration
+			10,            // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
 			"tcp")
+		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_UDP_Rate.Enable {
 		fmt.Println("Starting DNS over UDP Rate Test")
@@ -178,12 +192,13 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerUDP_DNS_Port,
-			time.Second*1, // restDuration
+			time.Second*5, // restDuration
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.DNS_UDP_Rate.Duration), // testDuration
 			config.Client.PID,
 			"udp")
+		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_TCP_Rate.Enable {
 		fmt.Println("Starting DNS over UDP Rate Test")
@@ -192,12 +207,13 @@ func RunClient(config *types.Configuration) {
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_DNS_Port,
-			time.Second*1, // restDuration
+			time.Second*5, // restDuration
 			5,             // countTestsToRun
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.DNS_TCP_Rate.Duration), // testDuration
 			config.Client.PID,
 			"tcp")
+		time.Sleep(time.Second * 5)
 	}
 }
 
@@ -509,7 +525,7 @@ func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, 
 	fmt.Printf("\n")
 }
 
-func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, transportProtocol string) {
+func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, pid uint, transportProtocol string) {
 	url := fmt.Sprintf("test.service")
 	testNameForFile := ""
 	switch transportProtocol {
@@ -534,6 +550,7 @@ func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost strin
 				log.Fatalln("error writing record to file", err)
 			}
 			w.Flush()
+			time.Sleep(restDuration)
 		}
 	}
 	createLogFile(filename, contents)
@@ -564,6 +581,7 @@ func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
 			w.Write([]string{strconv.Itoa(requestsPerSecond), strconv.Itoa(int(testDuration.Milliseconds())), failureRate, cpu, ram})
 			w.Flush()
+			time.Sleep(restDuration)
 		}
 	}
 	createLogFile(filename, contents)
