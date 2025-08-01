@@ -1,6 +1,7 @@
 *.csv
 network-performance-tester
 network-performance-tester.exe
+network-performance-tester-client
 .vscode/
 test-results/
 *.exe
