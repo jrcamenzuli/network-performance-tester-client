@@ -60,7 +60,7 @@ func GetCPUandRAMForProcesses(processNames []string) map[string]*model.CpuAndRam
 
 		for _, proc := range processes {
 			cpuRam := GetCPUandRAM(proc.PID)
-			if cpuRam != nil && (cpuRam.Cpu > 0 || cpuRam.Ram > 0) {
+			if cpuRam != nil {
 				totalCPU += cpuRam.Cpu
 				totalRAM += cpuRam.Ram
 				processCount++
@@ -78,24 +78,61 @@ func GetCPUandRAMForProcesses(processNames []string) map[string]*model.CpuAndRam
 	return result
 }
 
+// parseMemoryString parses memory strings with units (K, M, G) and returns bytes
+func parseMemoryString(memStr string) uint64 {
+	if len(memStr) == 0 {
+		return 0
+	}
+	
+	multiplier := uint64(1)
+	numStr := memStr
+	
+	// Check for unit suffix
+	lastChar := memStr[len(memStr)-1]
+	switch lastChar {
+	case 'K', 'k':
+		multiplier = 1024
+		numStr = memStr[:len(memStr)-1]
+	case 'M', 'm':
+		multiplier = 1024 * 1024
+		numStr = memStr[:len(memStr)-1]
+	case 'G', 'g':
+		multiplier = 1024 * 1024 * 1024
+		numStr = memStr[:len(memStr)-1]
+	}
+	
+	if ramVal, err := strconv.ParseFloat(numStr, 64); err == nil {
+		return uint64(ramVal * float64(multiplier))
+	}
+	return 0
+}
+
 func GetCPUandRAM(pid uint) *model.CpuAndRam {
 	pidString := fmt.Sprintf("%d", pid)
-	cmd := exec.Command("bash", "-c", "top -l 2 | grep "+pidString+" | awk '{ printf(\"%s %d\\n\", $3, $8); }' | awk '{if(NR>1)print}'")
+	cmd := exec.Command("bash", "-c", "top -l 2 | grep "+pidString+" | awk '{ printf(\"%s %s\\n\", $3, $8); }' | awk '{if(NR>1)print}'")
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
-	raw := strings.Split(string(stdoutStderr), " ")
-	if len(raw) == 2 {
-		err = nil
-		var cpu float64
-		var ram uint64
-		raw[1] = raw[1][:len(raw[1])-1]
-		cpu, err = strconv.ParseFloat(raw[0], 32)
-		ram, err = strconv.ParseUint(raw[1], 10, 64)
-		return &model.CpuAndRam{Cpu: float64(cpu / 100.0), Ram: uint(ram)}
+	
+	raw := strings.Split(strings.TrimSpace(string(stdoutStderr)), " ")
+	if len(raw) != 2 {
+		return &model.CpuAndRam{}
 	}
-	return &model.CpuAndRam{}
+	
+	// Parse CPU percentage
+	cpu, err := strconv.ParseFloat(raw[0], 64)
+	if err != nil {
+		cpu = 0.0
+	}
+	
+	// Parse memory with unit suffixes
+	ram := parseMemoryString(strings.TrimSpace(raw[1]))
+	
+	return &model.CpuAndRam{
+		Cpu: cpu / 100.0, // Convert percentage to decimal
+		Ram: uint(ram),
+	}
 }
 
 func GetSystemCPUUsage() float64 {
