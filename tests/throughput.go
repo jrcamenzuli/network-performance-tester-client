@@ -18,7 +18,9 @@ const countBytesTransfer = 100000000 // 100MB
 
 func DownloadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
 	url := fmt.Sprintf("%s%s:%d/download/%d", serverProtocol, serverHost, serverPort, countBytesTransfer)
-	resp, err := http.Get(url)
+
+	client := util.CreateHTTPSClient()
+	resp, err := client.Get(url)
 	if err == nil {
 		defer resp.Body.Close()
 	} else {
@@ -108,7 +110,7 @@ func UploadThroughputTest(serverProtocol string, serverHost string, serverPort u
 	req.ContentLength = totalSize
 
 	//process request
-	client := &http.Client{}
+	client := util.CreateHTTPSClient()
 	tStart = time.Now()
 	resp, err := client.Do(req)
 	tStop = time.Now()

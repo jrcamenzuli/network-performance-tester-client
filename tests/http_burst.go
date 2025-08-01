@@ -3,7 +3,6 @@ package tests
 import (
 	"fmt"
 	"math"
-	"net/http"
 	"sync"
 	"time"
 
@@ -23,13 +22,14 @@ func HttpBurstTest(url string, burstSize int, pid uint, isHttps bool) model.Burs
 	var wg sync.WaitGroup
 
 	fmt.Printf("Sending a burst of %d %s requests to %s\n", burstSize, protocol, url)
+	client := util.CreateHTTPSClient()
 	tStart := time.Now()
 	for i := 0; i <= burstSize; i++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
 			countRequests++
-			resp, err := http.Get(url)
+			resp, err := client.Get(url)
 			if err == nil {
 				countResponses++
 				defer resp.Body.Close()

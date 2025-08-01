@@ -3,7 +3,6 @@ package tests
 import (
 	"fmt"
 	"math"
-	"net/http"
 	"sync"
 	"time"
 
@@ -21,6 +20,7 @@ func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSeco
 
 	fmt.Printf("Sending %d %s requests per second for %s to %s\n", desiredRequestsPerSecond, protocol, testDuration, url)
 
+	client := util.CreateHTTPSClient()
 	countRequests := 0
 	countResponses := 0
 	countSamples := 0
@@ -63,7 +63,7 @@ func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSeco
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
-			resp, err := http.Get(url)
+			resp, err := client.Get(url)
 			// fmt.Println("boop")
 			if err == nil {
 				countResponses++
