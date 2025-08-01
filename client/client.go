@@ -471,11 +471,11 @@ func testPing(logfilePrefix string, logfilePostfix string, serverHost string, se
 		w.Write([]string{"ping average (ms)"})
 		address := fmt.Sprintf("%s:%d", serverHost, serverPort)
 		conn, err := net.Dial("udp", address)
-		defer conn.Close()
 		if err != nil {
 			fmt.Printf("Some error %v", err)
 			return
 		}
+		defer conn.Close()
 		averagePingMicroSeconds := 0.0
 		for i := uint(0); i < countSamples; i++ {
 			dt := tests.Ping(conn)
@@ -498,11 +498,11 @@ func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, 
 		w.Write([]string{"average jitter (ms)"})
 		address := fmt.Sprintf("%s:%d", serverHost, serverPort)
 		conn, err := net.Dial("udp", address)
-		defer conn.Close()
 		if err != nil {
 			fmt.Printf("Some error %v", err)
 			return
 		}
+		defer conn.Close()
 		averagePingMicroSeconds := 0.0
 		dt1 := tests.Ping(conn)
 		dt2 := time.Second

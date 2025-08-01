@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/jrcamenzuli/network-performance-tester-client/model"
@@ -27,24 +28,25 @@ func test() {
 
 // todo
 func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string) model.BurstTest {
-	countRequests := 0
-	countResponses := 0
+	countRequests := int32(0)
+	countResponses := int32(0)
 	var wg sync.WaitGroup
-
-	c := dns.Client{Net: transportProtocol}
-	c.Dial(fmt.Sprintf("%s:%d", serverHost, serverPort))
-	msg := dns.Msg{}
-	msg.SetQuestion(dns.Fqdn(url), dns.TypeA)
 
 	fmt.Printf("Sending a burst of %d DNS over %s queries to %s:%d\n", burstSize, strings.ToUpper(transportProtocol), serverHost, serverPort)
 	tStart := time.Now()
-	for i := 0; i <= burstSize; i++ {
+	for i := 0; i < burstSize; i++ {
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
-			countRequests++
+			
+			// Create a new client and message for each goroutine to avoid race conditions
+			c := dns.Client{Net: transportProtocol}
+			msg := dns.Msg{}
+			msg.SetQuestion(dns.Fqdn(url), dns.TypeA)
 
 			resp, _, err := c.Exchange(&msg, fmt.Sprintf("%s:%d", serverHost, serverPort))
+			atomic.AddInt32(&countRequests, 1)
+			
 			if err != nil {
 				fmt.Println("Error:", err)
 				return
@@ -61,11 +63,7 @@ func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, server
 				}
 			}
 
-			if err == nil {
-				countResponses++
-			} else {
-				return
-			}
+			atomic.AddInt32(&countResponses, 1)
 		}(&wg)
 	}
 	cpuAndRam := util.GetCPUandRAM(pid)
