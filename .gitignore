@@ -4,3 +4,4 @@ network-performance-tester.exe
 .vscode/
 test-results/
 *.exe
+config.yml

@@ -10,6 +10,74 @@ import (
 	"github.com/jrcamenzuli/network-performance-tester-client/model"
 )
 
+// ProcessInfo holds information about a discovered process
+type ProcessInfo struct {
+	PID  uint
+	Name string
+}
+
+// FindProcessesByName finds all processes matching the given name
+func FindProcessesByName(processName string) []ProcessInfo {
+	var processes []ProcessInfo
+
+	// Use pgrep to find processes by name
+	cmd := exec.Command("pgrep", "-f", processName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// No processes found or error - return empty slice
+		return processes
+	}
+
+	pidStrings := strings.Fields(strings.TrimSpace(string(output)))
+	for _, pidStr := range pidStrings {
+		if pid, err := strconv.ParseUint(pidStr, 10, 32); err == nil {
+			processes = append(processes, ProcessInfo{
+				PID:  uint(pid),
+				Name: processName,
+			})
+		}
+	}
+
+	return processes
+}
+
+// GetCPUandRAMForProcesses gets CPU and RAM usage for multiple processes by name
+func GetCPUandRAMForProcesses(processNames []string) map[string]*model.CpuAndRam {
+	result := make(map[string]*model.CpuAndRam)
+
+	for _, processName := range processNames {
+		processes := FindProcessesByName(processName)
+		if len(processes) == 0 {
+			// No processes found for this name
+			result[processName] = &model.CpuAndRam{ProcessName: processName}
+			continue
+		}
+
+		// Aggregate CPU and RAM usage for all processes with this name
+		totalCPU := 0.0
+		totalRAM := uint(0)
+		processCount := 0
+
+		for _, proc := range processes {
+			cpuRam := GetCPUandRAM(proc.PID)
+			if cpuRam != nil && (cpuRam.Cpu > 0 || cpuRam.Ram > 0) {
+				totalCPU += cpuRam.Cpu
+				totalRAM += cpuRam.Ram
+				processCount++
+			}
+		}
+
+		result[processName] = &model.CpuAndRam{
+			Cpu:          totalCPU,
+			Ram:          totalRAM,
+			ProcessName:  processName,
+			ProcessCount: processCount,
+		}
+	}
+
+	return result
+}
+
 func GetCPUandRAM(pid uint) *model.CpuAndRam {
 	pidString := fmt.Sprintf("%d", pid)
 	cmd := exec.Command("bash", "-c", "top -l 2 | grep "+pidString+" | awk '{ printf(\"%s %d\\n\", $3, $8); }' | awk '{if(NR>1)print}'")

@@ -1,10 +1,13 @@
 # create as many configuration files as you want
 
 client:
-  pid: 0
+  process_names:                                                       # List of process names to monitor
+    - "com.familyzone.macappproxy.fzmacdnsproxy"
+    - "com.familyzone.macappproxy.fzmacappproxy"
+  # log_file_postfix: "v3.6.9-1291-prd-MITM_ON-WEB"
+  log_file_postfix: "v3.6.9-1291-prd-MITM_ON-WEB"                     # a string to append to the CSV file names
+  # log_file_postfix: "unfiltered"
   server_host: "server"
-  log_file_postfix: "some-relevant-postfix-text"                     # a string to append to the CSV file names
-  # log_file_postfix: "control-test"
   server_udp_port: 9000
   server_ping_port: 9001
   server_tcp_http_port: 80
@@ -19,7 +22,7 @@ client:
     http_throughput:
       enable: true
     https_throughput:
-      enable: true
+      enable: false
     ping:
       enable: true
       countSamples: 100
@@ -29,20 +32,20 @@ client:
     http_burst:
       enable: true
     https_burst:
-      enable: true
+      enable: false
     http_rate:
       enable: true
       duration: 10
     https_rate:
-      enable: true
+      enable: false
       duration: 10
     dns_udp_burst:
       enable: true
     dns_tcp_burst:
-      enable: true
+      enable: false
     dns_udp_rate:
       enable: true
       duration: 10
     dns_tcp_rate:
-      enable: true
+      enable: false
       duration: 10

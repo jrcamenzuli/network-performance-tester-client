@@ -53,7 +53,14 @@ func RunClient(config *types.Configuration) {
 	}
 
 	if config.Client.Tests.IdleStateOfProcess.Enable {
-		testIdleStateOfProcess(logfilePrefix, config.Client.LogfilePostfix, config.Client.PID)
+		// Support both new process names and legacy PID for backward compatibility
+		if len(config.Client.ProcessNames) > 0 {
+			testIdleStateOfProcesses(logfilePrefix, config.Client.LogfilePostfix, config.Client.ProcessNames)
+		} else if config.Client.PID > 0 {
+			testIdleStateOfProcess(logfilePrefix, config.Client.LogfilePostfix, config.Client.PID)
+		} else {
+			fmt.Printf(util.WarningColor, "\nNo processes specified for monitoring. Please set either 'process_names' or 'pid' in config.\n\n")
+		}
 		time.Sleep(time.Second * 5)
 	}
 
@@ -264,7 +271,7 @@ func testIdleStateOfDevice(logfilePrefix string, logfilePostfix string) {
 	fmt.Printf("\n")
 }
 
-// Idle state test of a process
+// Idle state test of a process (legacy - by PID)
 func testIdleStateOfProcess(logfilePrefix string, logfilePostfix string, pid uint) {
 	filename := testResultsDirectory + logfilePrefix + "-idleStateOfProcess" + logfilePostfix + ".csv"
 	idleStateOfProcess := tests.IdleStateOfProcess(pid)
@@ -281,6 +288,38 @@ func testIdleStateOfProcess(logfilePrefix string, logfilePostfix string, pid uin
 		cpu := fmt.Sprintf("%.4f%%", idleStateOfProcess.Cpu)
 		ram := fmt.Sprintf("%d", idleStateOfProcess.Ram/1e6)
 		w.Write([]string{cpu, ram})
+	}
+	createLogFile(filename, contents)
+	fmt.Printf("\n")
+}
+
+// Idle state test of processes (new - by process name)
+func testIdleStateOfProcesses(logfilePrefix string, logfilePostfix string, processNames []string) {
+	filename := testResultsDirectory + logfilePrefix + "-idleStateOfProcesses" + logfilePostfix + ".csv"
+	processUsage := tests.IdleStateOfProcesses(processNames)
+
+	// Print summary for each process
+	for _, processName := range processNames {
+		usage := processUsage[processName]
+		if usage.ProcessCount > 0 {
+			fmt.Printf("Idle state of \"%s\" process(es): %d instances, CPU %.2f%%, RAM %dMB\n",
+				processName, usage.ProcessCount, usage.Cpu*100.0, usage.Ram/1e6)
+		} else {
+			fmt.Printf(util.WarningColor,
+				fmt.Sprintf("\nI could not monitor any processes with name \"%s\" because none were found.\n", processName))
+		}
+	}
+
+	// Create CSV with results for all processes
+	contents := func(w *csv.Writer) {
+		w.Write([]string{"Process Name", "Process Count", "CPU (%)", "RAM (MB)"})
+		for _, processName := range processNames {
+			usage := processUsage[processName]
+			cpu := fmt.Sprintf("%.4f", usage.Cpu*100.0)
+			ram := fmt.Sprintf("%d", usage.Ram/1e6)
+			count := fmt.Sprintf("%d", usage.ProcessCount)
+			w.Write([]string{processName, count, cpu, ram})
+		}
 	}
 	createLogFile(filename, contents)
 	fmt.Printf("\n")

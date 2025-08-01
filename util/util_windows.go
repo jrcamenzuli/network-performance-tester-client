@@ -11,6 +11,82 @@ import (
 	"github.com/jrcamenzuli/network-performance-tester-client/model"
 )
 
+// ProcessInfo holds information about a discovered process
+type ProcessInfo struct {
+	PID  uint
+	Name string
+}
+
+// FindProcessesByName finds all processes matching the given name on Windows
+func FindProcessesByName(processName string) []ProcessInfo {
+	var processes []ProcessInfo
+
+	// Use PowerShell to find processes by name
+	cmd := exec.Command("powershell", "-nologo", "-noprofile", "-command",
+		fmt.Sprintf("Get-Process | Where-Object {$_.ProcessName -like '*%s*'} | Select-Object Id", processName))
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// No processes found or error - return empty slice
+		return processes
+	}
+
+	// Parse the PowerShell output to extract PIDs
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.Contains(line, "Id") || strings.Contains(line, "--") {
+			continue
+		}
+
+		if pid, err := strconv.ParseUint(line, 10, 32); err == nil {
+			processes = append(processes, ProcessInfo{
+				PID:  uint(pid),
+				Name: processName,
+			})
+		}
+	}
+
+	return processes
+}
+
+// GetCPUandRAMForProcesses gets CPU and RAM usage for multiple processes by name
+func GetCPUandRAMForProcesses(processNames []string) map[string]*model.CpuAndRam {
+	result := make(map[string]*model.CpuAndRam)
+
+	for _, processName := range processNames {
+		processes := FindProcessesByName(processName)
+		if len(processes) == 0 {
+			// No processes found for this name
+			result[processName] = &model.CpuAndRam{ProcessName: processName}
+			continue
+		}
+
+		// Aggregate CPU and RAM usage for all processes with this name
+		totalCPU := 0.0
+		totalRAM := uint(0)
+		processCount := 0
+
+		for _, proc := range processes {
+			cpuRam := GetCPUandRAM(proc.PID)
+			if cpuRam != nil && (cpuRam.Cpu > 0 || cpuRam.Ram > 0) {
+				totalCPU += cpuRam.Cpu
+				totalRAM += cpuRam.Ram
+				processCount++
+			}
+		}
+
+		result[processName] = &model.CpuAndRam{
+			Cpu:          totalCPU,
+			Ram:          totalRAM,
+			ProcessName:  processName,
+			ProcessCount: processCount,
+		}
+	}
+
+	return result
+}
+
 func GetCPUandRAM(pid uint) *model.CpuAndRam {
 	cmd := exec.Command("powershell", "-nologo", "-noprofile")
 	stdin, err := cmd.StdinPipe()

@@ -30,9 +30,11 @@ func (e ThroughputType) String() string {
 }
 
 type CpuAndRam struct {
-	Pid uint
-	Cpu float64
-	Ram uint
+	Pid          uint // Deprecated: kept for backward compatibility
+	Cpu          float64
+	Ram          uint
+	ProcessName  string // Name of the process being monitored
+	ProcessCount int    // Number of processes found with this name
 }
 
 type BurstTest struct {

@@ -2,15 +2,16 @@ package types
 
 type Configuration struct {
 	Client struct {
-		PID                  uint   `yaml:"pid"`
-		LogfilePostfix       string `yaml:"log_file_postfix"`
-		ServerHost           string `yaml:"server_host"`
-		ServerPingPort       uint   `yaml:"server_ping_port"`
-		ServerUDP_Port       uint   `yaml:"server_udp_port"`
-		ServerUDP_DNS_Port   uint   `yaml:"server_udp_dns_port"`
-		ServerTCP_HTTP_Port  uint   `yaml:"server_tcp_http_port"`
-		ServerTCP_HTTPS_Port uint   `yaml:"server_tcp_https_port"`
-		ServerTCP_DNS_Port   uint   `yaml:"server_tcp_dns_port"`
+		PID                  uint     `yaml:"pid"`           // Deprecated: kept for backward compatibility
+		ProcessNames         []string `yaml:"process_names"` // New: list of process names to monitor
+		LogfilePostfix       string   `yaml:"log_file_postfix"`
+		ServerHost           string   `yaml:"server_host"`
+		ServerPingPort       uint     `yaml:"server_ping_port"`
+		ServerUDP_Port       uint     `yaml:"server_udp_port"`
+		ServerUDP_DNS_Port   uint     `yaml:"server_udp_dns_port"`
+		ServerTCP_HTTP_Port  uint     `yaml:"server_tcp_http_port"`
+		ServerTCP_HTTPS_Port uint     `yaml:"server_tcp_https_port"`
+		ServerTCP_DNS_Port   uint     `yaml:"server_tcp_dns_port"`
 		Tests                struct {
 			IdleStateOfDevice struct {
 				Enable bool `yaml:"enable"`
