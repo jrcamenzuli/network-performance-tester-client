@@ -21,6 +21,34 @@ import (
 
 const testResultsDirectory string = "test-results/"
 
+// Helper function to generate dynamic CSV headers for process monitoring
+func generateProcessHeaders(baseHeaders []string, processNames []string) []string {
+	headers := make([]string, len(baseHeaders))
+	copy(headers, baseHeaders)
+
+	for _, processName := range processNames {
+		headers = append(headers, fmt.Sprintf("%s CPU (%%)", processName))
+		headers = append(headers, fmt.Sprintf("%s RAM (MB)", processName))
+	}
+	return headers
+}
+
+// Helper function to generate process data values for CSV
+func generateProcessData(processUsage model.ProcessCpuAndRam, processNames []string) []string {
+	var processData []string
+
+	for _, processName := range processNames {
+		if usage, exists := processUsage[processName]; exists && usage != nil {
+			processData = append(processData, fmt.Sprintf("%.4f", usage.Cpu*100.0))
+			processData = append(processData, fmt.Sprintf("%d", usage.Ram/1e6))
+		} else {
+			processData = append(processData, "") // Empty if process not found
+			processData = append(processData, "")
+		}
+	}
+	return processData
+}
+
 func createLogFile(filename string, contents func(*csv.Writer)) {
 	f, err := os.Create(filename)
 	if err != nil {
@@ -72,7 +100,8 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTP_Port,
 			config.Client.PID,
-			false)
+			false,
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -84,7 +113,8 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTPS_Port,
 			config.Client.PID,
-			true)
+			true,
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -119,7 +149,8 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerTCP_HTTP_Port,
 			10, // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
-			false)
+			false,
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -132,7 +163,8 @@ func RunClient(config *types.Configuration) {
 			config.Client.ServerTCP_HTTPS_Port,
 			10, // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
-			true)
+			true,
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 
@@ -176,7 +208,8 @@ func RunClient(config *types.Configuration) {
 			time.Second*5, // restDuration
 			10,            // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
-			"udp")
+			"udp",
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_TCP_Burst.Enable {
@@ -189,7 +222,8 @@ func RunClient(config *types.Configuration) {
 			time.Second*5, // restDuration
 			10,            // countTestsToRun
 			func(i int) int { return (i + 1) * 10 }, config.Client.PID,
-			"tcp")
+			"tcp",
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_UDP_Rate.Enable {
@@ -204,7 +238,8 @@ func RunClient(config *types.Configuration) {
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.DNS_UDP_Rate.Duration), // testDuration
 			config.Client.PID,
-			"udp")
+			"udp",
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_TCP_Rate.Enable {
@@ -219,7 +254,8 @@ func RunClient(config *types.Configuration) {
 			func(i int) int { return (i + 1) * 10 },
 			time.Second*time.Duration(config.Client.Tests.DNS_TCP_Rate.Duration), // testDuration
 			config.Client.PID,
-			"tcp")
+			"tcp",
+			config.Client.ProcessNames)
 		time.Sleep(time.Second * 5)
 	}
 }
@@ -326,7 +362,7 @@ func testIdleStateOfProcesses(logfilePrefix string, logfilePostfix string, proce
 }
 
 // HTTP Burst test barrage
-func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, isHttps bool) {
+func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, countTestsToRun int, fn model.Fn, pid uint, isHttps bool, processNames []string) {
 	serverProtocol := ""
 	testNameForFile := ""
 	if isHttps {
@@ -339,17 +375,28 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 	url := fmt.Sprintf("%s%s:%d/download/100000", serverProtocol, serverHost, serverPort)
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"}) // todo: log CPU and RAM too
+		// Generate dynamic headers based on process names
+		baseHeaders := []string{"number of http requests in burst", "time to complete (ms)", "failure rate (%)"}
+		headers := generateProcessHeaders(baseHeaders, processNames)
+		w.Write(headers)
+
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
-			result := tests.HttpBurstTest(url, burstSize, pid, isHttps)
+			result := tests.HttpBurstTestWithProcesses(url, burstSize, pid, isHttps, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
-			var cpu, ram string
-			if result.CpuAndRam.Ram != 0 {
-				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
-				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
+
+			// Build row data with base values
+			rowData := []string{
+				strconv.Itoa(burstSize),
+				strconv.Itoa(int(result.Duration.Milliseconds())),
+				failureRate,
 			}
-			if err := w.Write([]string{strconv.Itoa(burstSize), strconv.Itoa(int(result.Duration.Milliseconds())), failureRate, cpu, ram}); err != nil {
+
+			// Add process-specific data
+			processData := generateProcessData(result.ProcessCpuAndRam, processNames)
+			rowData = append(rowData, processData...)
+
+			if err := w.Write(rowData); err != nil {
 				log.Fatalln("error writing record to file", err)
 			}
 			w.Flush()
@@ -392,7 +439,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 	fmt.Printf("\n")
 }
 
-func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, pid uint, isHttps bool) {
+func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, pid uint, isHttps bool, processNames []string) {
 	serverProtocol := ""
 	testNameForFile := ""
 	if isHttps {
@@ -405,41 +452,49 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 	fmt.Printf("Half Duplex Throughput:\n")
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"transfer mode (half/full duplex)", "bytes transferred (MB)", "duration (ms)", "transfer rate (MB/s)", "transfer rate (Mb/s)", "average CPU (%)", "average RAM (MB)"})
+		// Generate dynamic headers based on process names
+		baseHeaders := []string{"transfer mode (half/full duplex)", "bytes transferred (MB)", "duration (ms)", "transfer rate (MB/s)", "transfer rate (Mb/s)"}
+		headers := generateProcessHeaders(baseHeaders, processNames)
+		w.Write(headers)
 
-		uploadThroughputTestResult, _ := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid)
+		uploadThroughputTestResult, _ := tests.UploadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
 		Bps := float64(uploadThroughputTestResult.CountBytesTransferred) / (float64(uploadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps := Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", uploadThroughputTestResult.Type, float64(uploadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
 
-		transferMode := fmt.Sprintf("%s", uploadThroughputTestResult.Type)
-		bytes_MB := fmt.Sprintf("%.0f", float64(uploadThroughputTestResult.CountBytesTransferred)/1e6)
-		duration_ms := fmt.Sprintf("%.0f", (float64(uploadThroughputTestResult.DurationNanoseconds) / 1e6))
-		rate_MBps := fmt.Sprintf("%.0f", Bps/1e6)
-		rate_Mbps := fmt.Sprintf("%.0f", bps/1e6)
-		var cpu, ram string
-		if uploadThroughputTestResult.CpuAndRam.Ram != 0 {
-			cpu = fmt.Sprintf("%.4f", uploadThroughputTestResult.CpuAndRam.Cpu)
-			ram = fmt.Sprintf("%d", uploadThroughputTestResult.CpuAndRam.Ram/1e6)
+		// Build row data with base values
+		rowData := []string{
+			fmt.Sprintf("%s", uploadThroughputTestResult.Type),
+			fmt.Sprintf("%.0f", float64(uploadThroughputTestResult.CountBytesTransferred)/1e6),
+			fmt.Sprintf("%.0f", (float64(uploadThroughputTestResult.DurationNanoseconds) / 1e6)),
+			fmt.Sprintf("%.0f", Bps/1e6),
+			fmt.Sprintf("%.0f", bps/1e6),
 		}
-		w.Write([]string{transferMode, bytes_MB, duration_ms, rate_MBps, rate_Mbps, cpu, ram})
+
+		// Add process-specific data
+		processData := generateProcessData(uploadThroughputTestResult.ProcessCpuAndRam, processNames)
+		rowData = append(rowData, processData...)
+		w.Write(rowData)
 		w.Flush()
 
-		downloadThroughputTestResult, _ := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid)
+		downloadThroughputTestResult, _ := tests.DownloadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
 		Bps = float64(downloadThroughputTestResult.CountBytesTransferred) / (float64(downloadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps = Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", downloadThroughputTestResult.Type, float64(downloadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
 
-		transferMode = fmt.Sprintf("%s", downloadThroughputTestResult.Type)
-		bytes_MB = fmt.Sprintf("%.0f", float64(downloadThroughputTestResult.CountBytesTransferred)/1e6)
-		duration_ms = fmt.Sprintf("%.0f", (float64(downloadThroughputTestResult.DurationNanoseconds) / 1e6))
-		rate_MBps = fmt.Sprintf("%.0f", Bps/1e6)
-		rate_Mbps = fmt.Sprintf("%.0f", bps/1e6)
-		if downloadThroughputTestResult.CpuAndRam.Ram != 0 {
-			cpu = fmt.Sprintf("%.4f", uploadThroughputTestResult.CpuAndRam.Cpu)
-			ram = fmt.Sprintf("%d", uploadThroughputTestResult.CpuAndRam.Ram/1e6)
+		// Build row data with base values for download
+		rowData = []string{
+			fmt.Sprintf("%s", downloadThroughputTestResult.Type),
+			fmt.Sprintf("%.0f", float64(downloadThroughputTestResult.CountBytesTransferred)/1e6),
+			fmt.Sprintf("%.0f", (float64(downloadThroughputTestResult.DurationNanoseconds) / 1e6)),
+			fmt.Sprintf("%.0f", Bps/1e6),
+			fmt.Sprintf("%.0f", bps/1e6),
 		}
-		w.Write([]string{transferMode, bytes_MB, duration_ms, rate_MBps, rate_Mbps, cpu, ram})
+
+		// Add process-specific data for download
+		processData = generateProcessData(downloadThroughputTestResult.ProcessCpuAndRam, processNames)
+		rowData = append(rowData, processData...)
+		w.Write(rowData)
 		w.Flush()
 
 		fmt.Printf("\n")
@@ -451,7 +506,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid)
+			result, err := tests.DownloadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
 			result.Type = model.RX_FullDuplex
 			if err != nil {
 				errors <- err
@@ -462,7 +517,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid)
+			result, err := tests.UploadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
 			result.Type = model.TX_FullDuplex
 			if err != nil {
 				errors <- err
@@ -487,16 +542,19 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 			bps := Bps * 8
 			fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", throughputTestResult.Type, float64(throughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
 
-			transferMode = fmt.Sprintf("%s", throughputTestResult.Type)
-			bytes_MB = fmt.Sprintf("%.0f", float64(throughputTestResult.CountBytesTransferred)/1e6)
-			duration_ms = fmt.Sprintf("%.0f", (float64(throughputTestResult.DurationNanoseconds) / 1e6))
-			rate_MBps = fmt.Sprintf("%.0f", Bps/1e6)
-			rate_Mbps = fmt.Sprintf("%.0f", bps/1e6)
-			if uploadThroughputTestResult.CpuAndRam.Ram != 0 {
-				cpu = fmt.Sprintf("%.4f", uploadThroughputTestResult.CpuAndRam.Cpu)
-				ram = fmt.Sprintf("%d", uploadThroughputTestResult.CpuAndRam.Ram/1e6)
+			// Build row data with base values for full duplex
+			rowData = []string{
+				fmt.Sprintf("%s", throughputTestResult.Type),
+				fmt.Sprintf("%.0f", float64(throughputTestResult.CountBytesTransferred)/1e6),
+				fmt.Sprintf("%.0f", (float64(throughputTestResult.DurationNanoseconds) / 1e6)),
+				fmt.Sprintf("%.0f", Bps/1e6),
+				fmt.Sprintf("%.0f", bps/1e6),
 			}
-			w.Write([]string{transferMode, bytes_MB, duration_ms, rate_MBps, rate_Mbps, cpu, ram})
+
+			// Add process-specific data for full duplex
+			processData = generateProcessData(throughputTestResult.ProcessCpuAndRam, processNames)
+			rowData = append(rowData, processData...)
+			w.Write(rowData)
 			w.Flush()
 		}
 	}
@@ -564,7 +622,7 @@ func testJitter(logfilePrefix string, logfilePostfix string, serverHost string, 
 	fmt.Printf("\n")
 }
 
-func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, pid uint, transportProtocol string) {
+func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, pid uint, transportProtocol string, processNames []string) {
 	url := fmt.Sprintf("test.service")
 	testNameForFile := ""
 	switch transportProtocol {
@@ -575,17 +633,28 @@ func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost strin
 	}
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"number of requests in burst", "time to complete (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
+		// Generate dynamic headers based on process names
+		baseHeaders := []string{"number of requests in burst", "time to complete (ms)", "failure rate (%)"}
+		headers := generateProcessHeaders(baseHeaders, processNames)
+		w.Write(headers)
+
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
-			result := tests.DnsBurstTest(url, burstSize, pid, serverHost, serverPort, transportProtocol)
+			result := tests.DnsBurstTestWithProcesses(url, burstSize, pid, serverHost, serverPort, transportProtocol, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
-			var cpu, ram string
-			if result.CpuAndRam.Ram != 0 {
-				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
-				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
+
+			// Build row data with base values
+			rowData := []string{
+				strconv.Itoa(burstSize),
+				strconv.Itoa(int(result.Duration.Milliseconds())),
+				failureRate,
 			}
-			if err := w.Write([]string{strconv.Itoa(burstSize), strconv.Itoa(int(result.Duration.Milliseconds())), failureRate, cpu, ram}); err != nil {
+
+			// Add process-specific data
+			processData := generateProcessData(result.ProcessCpuAndRam, processNames)
+			rowData = append(rowData, processData...)
+
+			if err := w.Write(rowData); err != nil {
 				log.Fatalln("error writing record to file", err)
 			}
 			w.Flush()
@@ -596,7 +665,7 @@ func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost strin
 	fmt.Printf("\n")
 }
 
-func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint, transportProtocol string) {
+func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string, serverPort uint, restDuration time.Duration, countTestsToRun int, fn model.Fn, testDuration time.Duration, pid uint, transportProtocol string, processNames []string) {
 	url := fmt.Sprintf("test.service")
 	testNameForFile := ""
 	switch transportProtocol {
@@ -607,18 +676,28 @@ func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string
 	}
 	filename := testResultsDirectory + logfilePrefix + testNameForFile + logfilePostfix + ".csv"
 	contents := func(w *csv.Writer) {
-		w.Write([]string{"requests per second", "test duration (ms)", "failure rate (%)", "average CPU (%)", "average RAM (MB)"})
+		// Generate dynamic headers based on process names
+		baseHeaders := []string{"requests per second", "test duration (ms)", "failure rate (%)"}
+		headers := generateProcessHeaders(baseHeaders, processNames)
+		w.Write(headers)
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)
-			result := tests.DnsRateTest(url, testDuration, requestsPerSecond, pid, serverHost, serverPort, transportProtocol)
-			var cpu, ram string
-			if result.CpuAndRam.Ram != 0 {
-				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
-				ram = fmt.Sprintf("%d", result.CpuAndRam.Ram/1e6)
-			}
+			result := tests.DnsRateTestWithProcesses(url, testDuration, requestsPerSecond, pid, serverHost, serverPort, transportProtocol, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
-			w.Write([]string{strconv.Itoa(requestsPerSecond), strconv.Itoa(int(testDuration.Milliseconds())), failureRate, cpu, ram})
+
+			// Build row data with base values
+			rowData := []string{
+				strconv.Itoa(requestsPerSecond),
+				strconv.Itoa(int(testDuration.Milliseconds())),
+				failureRate,
+			}
+
+			// Add process-specific data
+			processData := generateProcessData(result.ProcessCpuAndRam, processNames)
+			rowData = append(rowData, processData...)
+
+			w.Write(rowData)
 			w.Flush()
 			time.Sleep(restDuration)
 		}

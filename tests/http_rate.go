@@ -11,6 +11,10 @@ import (
 )
 
 func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, isHttps bool) model.RateTest {
+	return HttpRateTestWithProcesses(url, testDuration, desiredRequestsPerSecond, pid, isHttps, nil)
+}
+
+func HttpRateTestWithProcesses(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, isHttps bool, processNames []string) model.RateTest {
 	protocol := ""
 	if isHttps {
 		protocol = "HTTPS"
@@ -38,6 +42,12 @@ func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSeco
 
 	tStart := time.Now()
 	tLast := tStart
+
+	// Start monitoring processes if provided
+	var processUsage model.ProcessCpuAndRam
+	if len(processNames) > 0 {
+		processUsage = util.MonitorProcessesContinuously(processNames, testDuration, 100*time.Millisecond)
+	}
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
@@ -96,5 +106,9 @@ func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSeco
 	wg.Wait()
 
 	failureRate := math.Max(0, 1.0-float64(countResponses)/float64(countRequests))
-	return model.RateTest{FailureRate: failureRate, CpuAndRam: cpuAndRam}
+	return model.RateTest{
+		FailureRate:      failureRate,
+		CpuAndRam:        cpuAndRam,
+		ProcessCpuAndRam: processUsage,
+	}
 }

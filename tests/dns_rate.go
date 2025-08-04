@@ -13,6 +13,10 @@ import (
 )
 
 func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, serverHost string, serverPort uint, transportProtocol string) model.RateTest {
+	return DnsRateTestWithProcesses(url, testDuration, desiredRequestsPerSecond, pid, serverHost, serverPort, transportProtocol, nil)
+}
+
+func DnsRateTestWithProcesses(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.RateTest {
 	fmt.Printf("Sending %d DNS over %s requests per second for %s to %s:%d\n", desiredRequestsPerSecond, strings.ToUpper(transportProtocol), testDuration, serverHost, serverPort)
 	countRequests := 0
 	countResponses := 0
@@ -31,6 +35,12 @@ func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecon
 
 	tStart := time.Now()
 	tLast := tStart
+
+	// Start monitoring processes if provided
+	var processUsage model.ProcessCpuAndRam
+	if len(processNames) > 0 {
+		processUsage = util.MonitorProcessesContinuously(processNames, testDuration, 100*time.Millisecond)
+	}
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
@@ -110,5 +120,9 @@ func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecon
 	wg.Wait()
 
 	failureRate := math.Max(0, 1.0-float64(countResponses)/float64(countRequests))
-	return model.RateTest{FailureRate: failureRate, CpuAndRam: cpuAndRam}
+	return model.RateTest{
+		FailureRate:      failureRate,
+		CpuAndRam:        cpuAndRam,
+		ProcessCpuAndRam: processUsage,
+	}
 }

@@ -37,15 +37,20 @@ type CpuAndRam struct {
 	ProcessCount int    // Number of processes found with this name
 }
 
+// ProcessCpuAndRam represents CPU and RAM usage for multiple processes
+type ProcessCpuAndRam map[string]*CpuAndRam
+
 type BurstTest struct {
-	Duration    time.Duration
-	FailureRate float64
-	CpuAndRam   *CpuAndRam
+	Duration         time.Duration
+	FailureRate      float64
+	CpuAndRam        *CpuAndRam       // Legacy single-process monitoring
+	ProcessCpuAndRam ProcessCpuAndRam // Multi-process monitoring
 }
 
 type RateTest struct {
-	FailureRate float64
-	CpuAndRam   CpuAndRam
+	FailureRate      float64
+	CpuAndRam        CpuAndRam        // Legacy single-process monitoring
+	ProcessCpuAndRam ProcessCpuAndRam // Multi-process monitoring
 }
 
 type Fn func(int) int
@@ -54,7 +59,8 @@ type ThroughputTest struct {
 	Type                  ThroughputType
 	CountBytesTransferred uint64
 	DurationNanoseconds   uint64
-	CpuAndRam             CpuAndRam
+	CpuAndRam             CpuAndRam        // Legacy single-process monitoring
+	ProcessCpuAndRam      ProcessCpuAndRam // Multi-process monitoring
 }
 
 // Device Under Test Information

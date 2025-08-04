@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jrcamenzuli/network-performance-tester-client/model"
 )
@@ -139,4 +141,79 @@ func GetSystemCPUUsage() float64 {
 	match := re.FindAllString(string(out), -1)
 	val, _ := strconv.ParseFloat(match[len(match)-1], 64)
 	return val / 100.0
+}
+
+// MonitorProcessesContinuously monitors processes continuously and returns average CPU and maximum RAM usage
+func MonitorProcessesContinuously(processNames []string, duration time.Duration, sampleInterval time.Duration) model.ProcessCpuAndRam {
+	result := make(model.ProcessCpuAndRam)
+
+	// Initialize result map
+	for _, processName := range processNames {
+		result[processName] = &model.CpuAndRam{
+			ProcessName: processName,
+			Cpu:         0.0,
+			Ram:         0,
+		}
+	}
+
+	if len(processNames) == 0 {
+		return result
+	}
+
+	var wg sync.WaitGroup
+	mutex := &sync.Mutex{}
+
+	// Track samples and max RAM for each process
+	sampleCounts := make(map[string]int)
+	maxRAM := make(map[string]uint)
+	totalCPU := make(map[string]float64)
+
+	for _, processName := range processNames {
+		sampleCounts[processName] = 0
+		maxRAM[processName] = 0
+		totalCPU[processName] = 0.0
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startTime := time.Now()
+
+		for time.Since(startTime) < duration {
+			currentUsage := GetCPUandRAMForProcesses(processNames)
+
+			mutex.Lock()
+			for processName, usage := range currentUsage {
+				if usage != nil {
+					totalCPU[processName] += usage.Cpu
+					sampleCounts[processName]++
+
+					// Track maximum RAM usage
+					if usage.Ram > maxRAM[processName] {
+						maxRAM[processName] = usage.Ram
+					}
+
+					// Update process count
+					result[processName].ProcessCount = usage.ProcessCount
+				}
+			}
+			mutex.Unlock()
+
+			time.Sleep(sampleInterval)
+		}
+	}()
+
+	wg.Wait()
+
+	// Calculate averages
+	mutex.Lock()
+	for processName := range result {
+		if sampleCounts[processName] > 0 {
+			result[processName].Cpu = totalCPU[processName] / float64(sampleCounts[processName])
+		}
+		result[processName].Ram = maxRAM[processName]
+	}
+	mutex.Unlock()
+
+	return result
 }

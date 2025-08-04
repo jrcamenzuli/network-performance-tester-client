@@ -28,11 +28,29 @@ func test() {
 
 // todo
 func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string) model.BurstTest {
+	return DnsBurstTestWithProcesses(url, burstSize, pid, serverHost, serverPort, transportProtocol, nil)
+}
+
+func DnsBurstTestWithProcesses(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.BurstTest {
 	countRequests := int32(0)
 	countResponses := int32(0)
 	var wg sync.WaitGroup
 
 	fmt.Printf("Sending a burst of %d DNS over %s queries to %s:%d\n", burstSize, strings.ToUpper(transportProtocol), serverHost, serverPort)
+
+	// Start monitoring processes if provided
+	var processMonitoringDone sync.WaitGroup
+	var processUsage model.ProcessCpuAndRam
+
+	if len(processNames) > 0 {
+		processMonitoringDone.Add(1)
+		go func() {
+			defer processMonitoringDone.Done()
+			// Monitor for a reasonable burst test duration (5 seconds should be enough for most DNS bursts)
+			processUsage = util.MonitorProcessesContinuously(processNames, 5*time.Second, 100*time.Millisecond)
+		}()
+	}
+
 	tStart := time.Now()
 	for i := 0; i < burstSize; i++ {
 		wg.Add(1)
@@ -66,11 +84,21 @@ func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, server
 	tStop := time.Now()
 	duration := tStop.Sub(tStart)
 
+	// Stop process monitoring
+	if len(processNames) > 0 {
+		processMonitoringDone.Wait()
+	}
+
 	// Print summary
 	successfulQueries := atomic.LoadInt32(&countResponses)
 	totalQueries := atomic.LoadInt32(&countRequests)
 	fmt.Printf("DNS Burst Test Summary: %d/%d queries successful in %dms\n", successfulQueries, totalQueries, duration.Milliseconds())
 
 	failureRate := math.Max(0, 1.0-float64(countResponses)/float64(countRequests))
-	return model.BurstTest{Duration: duration, FailureRate: failureRate, CpuAndRam: cpuAndRam}
+	return model.BurstTest{
+		Duration:         duration,
+		FailureRate:      failureRate,
+		CpuAndRam:        cpuAndRam,
+		ProcessCpuAndRam: processUsage,
+	}
 }

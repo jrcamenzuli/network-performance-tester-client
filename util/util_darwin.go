@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jrcamenzuli/network-performance-tester-client/model"
 )
@@ -83,10 +85,10 @@ func parseMemoryString(memStr string) uint64 {
 	if len(memStr) == 0 {
 		return 0
 	}
-	
+
 	multiplier := uint64(1)
 	numStr := memStr
-	
+
 	// Check for unit suffix
 	lastChar := memStr[len(memStr)-1]
 	switch lastChar {
@@ -100,7 +102,7 @@ func parseMemoryString(memStr string) uint64 {
 		multiplier = 1024 * 1024 * 1024
 		numStr = memStr[:len(memStr)-1]
 	}
-	
+
 	if ramVal, err := strconv.ParseFloat(numStr, 64); err == nil {
 		return uint64(ramVal * float64(multiplier))
 	}
@@ -114,21 +116,21 @@ func GetCPUandRAM(pid uint) *model.CpuAndRam {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	raw := strings.Split(strings.TrimSpace(string(stdoutStderr)), " ")
 	if len(raw) != 2 {
 		return &model.CpuAndRam{}
 	}
-	
+
 	// Parse CPU percentage
 	cpu, err := strconv.ParseFloat(raw[0], 64)
 	if err != nil {
 		cpu = 0.0
 	}
-	
+
 	// Parse memory with unit suffixes
 	ram := parseMemoryString(strings.TrimSpace(raw[1]))
-	
+
 	return &model.CpuAndRam{
 		Cpu: cpu / 100.0, // Convert percentage to decimal
 		Ram: uint(ram),
@@ -170,4 +172,79 @@ func GetSystemCPUUsage() float64 {
 	cpuUsage /= 100.0
 
 	return cpuUsage / float64(countCores)
+}
+
+// MonitorProcessesContinuously monitors processes continuously and returns average CPU and maximum RAM usage
+func MonitorProcessesContinuously(processNames []string, duration time.Duration, sampleInterval time.Duration) model.ProcessCpuAndRam {
+	result := make(model.ProcessCpuAndRam)
+
+	// Initialize result map
+	for _, processName := range processNames {
+		result[processName] = &model.CpuAndRam{
+			ProcessName: processName,
+			Cpu:         0.0,
+			Ram:         0,
+		}
+	}
+
+	if len(processNames) == 0 {
+		return result
+	}
+
+	var wg sync.WaitGroup
+	mutex := &sync.Mutex{}
+
+	// Track samples and max RAM for each process
+	sampleCounts := make(map[string]int)
+	maxRAM := make(map[string]uint)
+	totalCPU := make(map[string]float64)
+
+	for _, processName := range processNames {
+		sampleCounts[processName] = 0
+		maxRAM[processName] = 0
+		totalCPU[processName] = 0.0
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startTime := time.Now()
+
+		for time.Since(startTime) < duration {
+			currentUsage := GetCPUandRAMForProcesses(processNames)
+
+			mutex.Lock()
+			for processName, usage := range currentUsage {
+				if usage != nil {
+					totalCPU[processName] += usage.Cpu
+					sampleCounts[processName]++
+
+					// Track maximum RAM usage
+					if usage.Ram > maxRAM[processName] {
+						maxRAM[processName] = usage.Ram
+					}
+
+					// Update process count
+					result[processName].ProcessCount = usage.ProcessCount
+				}
+			}
+			mutex.Unlock()
+
+			time.Sleep(sampleInterval)
+		}
+	}()
+
+	wg.Wait()
+
+	// Calculate averages
+	mutex.Lock()
+	for processName := range result {
+		if sampleCounts[processName] > 0 {
+			result[processName].Cpu = totalCPU[processName] / float64(sampleCounts[processName])
+		}
+		result[processName].Ram = maxRAM[processName]
+	}
+	mutex.Unlock()
+
+	return result
 }
