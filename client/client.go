@@ -258,7 +258,7 @@ func RunClient(config *types.Configuration) {
 		time.Sleep(time.Second * 5)
 	}
 	if config.Client.Tests.DNS_TCP_Rate.Enable {
-		fmt.Println("Starting DNS over UDP Rate Test")
+		fmt.Println("Starting DNS over TCP Rate Test")
 		testDNS_Rate(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
