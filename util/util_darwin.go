@@ -198,11 +198,13 @@ func MonitorProcessesContinuously(processNames []string, duration time.Duration,
 	sampleCounts := make(map[string]int)
 	maxRAM := make(map[string]uint)
 	totalCPU := make(map[string]float64)
+	validRAMSamples := make(map[string]int) // Track how many valid RAM samples we got
 
 	for _, processName := range processNames {
 		sampleCounts[processName] = 0
 		maxRAM[processName] = 0
 		totalCPU[processName] = 0.0
+		validRAMSamples[processName] = 0
 	}
 
 	wg.Add(1)
@@ -215,13 +217,16 @@ func MonitorProcessesContinuously(processNames []string, duration time.Duration,
 
 			mutex.Lock()
 			for processName, usage := range currentUsage {
-				if usage != nil {
+				if usage != nil && usage.ProcessCount > 0 {
 					totalCPU[processName] += usage.Cpu
 					sampleCounts[processName]++
 
-					// Track maximum RAM usage
-					if usage.Ram > maxRAM[processName] {
-						maxRAM[processName] = usage.Ram
+					// Track maximum RAM usage only if we got a valid RAM value
+					if usage.Ram > 0 {
+						validRAMSamples[processName]++
+						if usage.Ram > maxRAM[processName] {
+							maxRAM[processName] = usage.Ram
+						}
 					}
 
 					// Update process count
@@ -242,7 +247,20 @@ func MonitorProcessesContinuously(processNames []string, duration time.Duration,
 		if sampleCounts[processName] > 0 {
 			result[processName].Cpu = totalCPU[processName] / float64(sampleCounts[processName])
 		}
-		result[processName].Ram = maxRAM[processName]
+
+		// Only set RAM if we got valid samples, otherwise report the issue
+		if validRAMSamples[processName] > 0 {
+			result[processName].Ram = maxRAM[processName]
+		} else {
+			// No valid RAM samples - try to get a final reading
+			finalUsage := GetCPUandRAMForProcesses([]string{processName})
+			if finalUsage[processName] != nil && finalUsage[processName].Ram > 0 {
+				result[processName].Ram = finalUsage[processName].Ram
+			} else {
+				// Still no valid reading, but set to a minimal value instead of 0
+				result[processName].Ram = 0 // We'll handle this in the CSV output
+			}
+		}
 	}
 	mutex.Unlock()
 

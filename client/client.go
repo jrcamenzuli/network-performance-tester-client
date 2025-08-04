@@ -40,7 +40,22 @@ func generateProcessData(processUsage model.ProcessCpuAndRam, processNames []str
 	for _, processName := range processNames {
 		if usage, exists := processUsage[processName]; exists && usage != nil {
 			processData = append(processData, fmt.Sprintf("%.4f", usage.Cpu*100.0))
-			processData = append(processData, fmt.Sprintf("%d", usage.Ram/1e6))
+
+			// Handle RAM value - if it's 0, try to get a current reading
+			ramValue := usage.Ram
+			if ramValue == 0 {
+				// Try to get current usage as fallback
+				currentUsage := util.GetCPUandRAMForProcesses([]string{processName})
+				if currentUsage[processName] != nil && currentUsage[processName].Ram > 0 {
+					ramValue = currentUsage[processName].Ram
+				}
+			}
+
+			if ramValue > 0 {
+				processData = append(processData, fmt.Sprintf("%d", ramValue/1e6))
+			} else {
+				processData = append(processData, "N/A") // Show N/A instead of 0
+			}
 		} else {
 			processData = append(processData, "") // Empty if process not found
 			processData = append(processData, "")
