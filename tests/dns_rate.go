@@ -34,8 +34,13 @@ func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecon
 
 	// Start monitoring processes if provided
 	var processUsage model.ProcessCpuAndRam
+	var processWg sync.WaitGroup
 	if len(processNames) > 0 {
-		processUsage = util.MonitorProcessesContinuously(processNames, testDuration, 100*time.Millisecond)
+		processWg.Add(1)
+		go func() {
+			defer processWg.Done()
+			processUsage = util.MonitorProcessesContinuously(processNames, testDuration, 100*time.Millisecond)
+		}()
 	}
 
 	wg.Add(1)
@@ -114,6 +119,11 @@ func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecon
 	}
 
 	wg.Wait()
+
+	// Wait for process monitoring to complete
+	if len(processNames) > 0 {
+		processWg.Wait()
+	}
 
 	failureRate := math.Max(0, 1.0-float64(countResponses)/float64(countRequests))
 	return model.RateTest{
