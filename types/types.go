@@ -26,12 +26,14 @@ type Configuration struct {
 				Enable bool `yaml:"enable"`
 			} `yaml:"https_burst"`
 			HTTP_Rate struct {
-				Enable   bool `yaml:"enable"`
-				Duration uint `yaml:"duration"`
+				Enable   bool  `yaml:"enable"`
+				Duration uint  `yaml:"duration"`
+				Rates    []int `yaml:"rates"`
 			} `yaml:"http_rate"`
 			HTTPS_Rate struct {
-				Enable   bool `yaml:"enable"`
-				Duration uint `yaml:"duration"`
+				Enable   bool  `yaml:"enable"`
+				Duration uint  `yaml:"duration"`
+				Rates    []int `yaml:"rates"`
 			} `yaml:"https_rate"`
 			DNS_UDP_Burst struct {
 				Enable   bool `yaml:"enable"`
@@ -42,12 +44,14 @@ type Configuration struct {
 				Duration uint `yaml:"duration"`
 			} `yaml:"dns_tcp_burst"`
 			DNS_UDP_Rate struct {
-				Enable   bool `yaml:"enable"`
-				Duration uint `yaml:"duration"`
+				Enable   bool  `yaml:"enable"`
+				Duration uint  `yaml:"duration"`
+				Rates    []int `yaml:"rates"`
 			} `yaml:"dns_udp_rate"`
 			DNS_TCP_Rate struct {
-				Enable   bool `yaml:"enable"`
-				Duration uint `yaml:"duration"`
+				Enable   bool  `yaml:"enable"`
+				Duration uint  `yaml:"duration"`
+				Rates    []int `yaml:"rates"`
 			} `yaml:"dns_tcp_rate"`
 			HTTP_Throughput struct {
 				Enable bool `yaml:"enable"`

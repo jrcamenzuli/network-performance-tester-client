@@ -185,14 +185,18 @@ func RunClient(config *types.Configuration) {
 
 	if config.Client.Tests.HTTP_Rate.Enable {
 		fmt.Println("Starting HTTP Rate Test")
+		rates := config.Client.Tests.HTTP_Rate.Rates
+		if len(rates) == 0 {
+			rates = []int{10, 20, 30, 40, 50} // default rates if none specified
+		}
 		testHTTP_Rate(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTP_Port,
 			time.Second*5, // restDuration
-			5,             // countTestsToRun
-			func(i int) int { return (i + 1) * 10 },
+			len(rates),    // countTestsToRun
+			func(i int) int { return rates[i] },
 			time.Second*time.Duration(config.Client.Tests.HTTP_Rate.Duration), // testDuration
 			config.Client.PID,
 			false)
@@ -200,14 +204,18 @@ func RunClient(config *types.Configuration) {
 	}
 	if config.Client.Tests.HTTPS_Rate.Enable {
 		fmt.Println("Starting HTTPS Rate Test")
+		rates := config.Client.Tests.HTTPS_Rate.Rates
+		if len(rates) == 0 {
+			rates = []int{10, 20, 30, 40, 50} // default rates if none specified
+		}
 		testHTTP_Rate(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_HTTPS_Port,
 			time.Second*5, // restDuration
-			5,             // countTestsToRun
-			func(i int) int { return (i + 1) * 10 },
+			len(rates),    // countTestsToRun
+			func(i int) int { return rates[i] },
 			time.Second*time.Duration(config.Client.Tests.HTTPS_Rate.Duration), // testDuration
 			config.Client.PID,
 			true)
@@ -243,14 +251,18 @@ func RunClient(config *types.Configuration) {
 	}
 	if config.Client.Tests.DNS_UDP_Rate.Enable {
 		fmt.Println("Starting DNS over UDP Rate Test")
+		rates := config.Client.Tests.DNS_UDP_Rate.Rates
+		if len(rates) == 0 {
+			rates = []int{10, 20, 30, 40, 50} // default rates if none specified
+		}
 		testDNS_Rate(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerUDP_DNS_Port,
 			time.Second*5, // restDuration
-			5,             // countTestsToRun
-			func(i int) int { return (i + 1) * 10 },
+			len(rates),    // countTestsToRun
+			func(i int) int { return rates[i] },
 			time.Second*time.Duration(config.Client.Tests.DNS_UDP_Rate.Duration), // testDuration
 			config.Client.PID,
 			"udp",
@@ -259,14 +271,18 @@ func RunClient(config *types.Configuration) {
 	}
 	if config.Client.Tests.DNS_TCP_Rate.Enable {
 		fmt.Println("Starting DNS over TCP Rate Test")
+		rates := config.Client.Tests.DNS_TCP_Rate.Rates
+		if len(rates) == 0 {
+			rates = []int{10, 20, 30, 40, 50} // default rates if none specified
+		}
 		testDNS_Rate(
 			logfilePrefix,
 			config.Client.LogfilePostfix,
 			config.Client.ServerHost,
 			config.Client.ServerTCP_DNS_Port,
 			time.Second*5, // restDuration
-			5,             // countTestsToRun
-			func(i int) int { return (i + 1) * 10 },
+			len(rates),    // countTestsToRun
+			func(i int) int { return rates[i] },
 			time.Second*time.Duration(config.Client.Tests.DNS_TCP_Rate.Duration), // testDuration
 			config.Client.PID,
 			"tcp",

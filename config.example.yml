@@ -33,9 +33,11 @@ client:
     http_rate:
       enable: true
       duration: 10
+      rates: [10, 20, 30, 40, 50]  # requests per second to test
     https_rate:
       enable: true
       duration: 10
+      rates: [10, 20, 30, 40, 50]  # requests per second to test
     dns_udp_burst:
       enable: true
     dns_tcp_burst:
@@ -43,6 +45,8 @@ client:
     dns_udp_rate:
       enable: true
       duration: 10
+      rates: [10, 20, 30, 40, 50]  # requests per second to test
     dns_tcp_rate:
       enable: true
       duration: 10
+      rates: [10, 20, 30, 40, 50]  # requests per second to test
