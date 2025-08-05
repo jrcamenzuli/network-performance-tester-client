@@ -10,11 +10,7 @@ import (
 	"github.com/jrcamenzuli/network-performance-tester-client/util"
 )
 
-func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, isHttps bool) model.RateTest {
-	return HttpRateTestWithProcesses(url, testDuration, desiredRequestsPerSecond, pid, isHttps, nil)
-}
-
-func HttpRateTestWithProcesses(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, isHttps bool, processNames []string) model.RateTest {
+func HttpRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, isHttps bool, processNames []string) model.RateTest {
 	protocol := ""
 	if isHttps {
 		protocol = "HTTPS"

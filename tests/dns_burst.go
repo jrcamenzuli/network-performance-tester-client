@@ -27,11 +27,7 @@ func test() {
 }
 
 // todo
-func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string) model.BurstTest {
-	return DnsBurstTestWithProcesses(url, burstSize, pid, serverHost, serverPort, transportProtocol, nil)
-}
-
-func DnsBurstTestWithProcesses(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.BurstTest {
+func DnsBurstTest(url string, burstSize int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.BurstTest {
 	countRequests := int32(0)
 	countResponses := int32(0)
 	var wg sync.WaitGroup

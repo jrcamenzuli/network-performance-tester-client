@@ -17,11 +17,7 @@ import (
 const chunkSize = 10000000
 const countBytesTransfer = 100000000 // 100MB
 
-func DownloadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
-	return DownloadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, nil)
-}
-
-func DownloadThroughputTestWithProcesses(serverProtocol string, serverHost string, serverPort uint, pid uint, processNames []string) (model.ThroughputTest, error) {
+func DownloadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint, processNames []string) (model.ThroughputTest, error) {
 	url := fmt.Sprintf("%s%s:%d/download/%d", serverProtocol, serverHost, serverPort, countBytesTransfer)
 
 	client := util.CreateHTTPSClient()
@@ -74,11 +70,7 @@ func DownloadThroughputTestWithProcesses(serverProtocol string, serverHost strin
 	}, nil
 }
 
-func UploadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint) (model.ThroughputTest, error) {
-	return UploadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, nil)
-}
-
-func UploadThroughputTestWithProcesses(serverProtocol string, serverHost string, serverPort uint, pid uint, processNames []string) (model.ThroughputTest, error) {
+func UploadThroughputTest(serverProtocol string, serverHost string, serverPort uint, pid uint, processNames []string) (model.ThroughputTest, error) {
 	url := fmt.Sprintf("%s%s:%d/upload", serverProtocol, serverHost, serverPort)
 	countBytesToSend := countBytesTransfer
 	var tStart time.Time

@@ -397,7 +397,7 @@ func testHTTP_Burst(logfilePrefix string, logfilePostfix string, serverHost stri
 
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
-			result := tests.HttpBurstTestWithProcesses(url, burstSize, pid, isHttps, processNames)
+			result := tests.HttpBurstTest(url, burstSize, pid, isHttps, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
 
 			// Build row data with base values
@@ -439,7 +439,7 @@ func testHTTP_Rate(logfilePrefix string, logfilePostfix string, serverHost strin
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)
-			result := tests.HttpRateTest(url, testDuration, requestsPerSecond, pid, isHttps)
+			result := tests.HttpRateTest(url, testDuration, requestsPerSecond, pid, isHttps, nil)
 			var cpu, ram string
 			if result.CpuAndRam.Ram != 0 {
 				cpu = fmt.Sprintf("%.4f", result.CpuAndRam.Cpu)
@@ -472,7 +472,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		headers := generateProcessHeaders(baseHeaders, processNames)
 		w.Write(headers)
 
-		uploadThroughputTestResult, _ := tests.UploadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
+		uploadThroughputTestResult, _ := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid, processNames)
 		Bps := float64(uploadThroughputTestResult.CountBytesTransferred) / (float64(uploadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps := Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", uploadThroughputTestResult.Type, float64(uploadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
@@ -492,7 +492,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		w.Write(rowData)
 		w.Flush()
 
-		downloadThroughputTestResult, _ := tests.DownloadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
+		downloadThroughputTestResult, _ := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid, processNames)
 		Bps = float64(downloadThroughputTestResult.CountBytesTransferred) / (float64(downloadThroughputTestResult.DurationNanoseconds) / 1e9)
 		bps = Bps * 8
 		fmt.Printf("%s\t--------- %.0fMB @ %.0fMB/s (%.0fMb/s) ------------\n", downloadThroughputTestResult.Type, float64(downloadThroughputTestResult.CountBytesTransferred)/1e6, Bps/1e6, bps/1e6)
@@ -521,7 +521,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.DownloadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
+			result, err := tests.DownloadThroughputTest(serverProtocol, serverHost, serverPort, pid, processNames)
 			result.Type = model.RX_FullDuplex
 			if err != nil {
 				errors <- err
@@ -532,7 +532,7 @@ func testHTTP_Throughput(logfilePrefix string, logfilePostfix string, serverHost
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := tests.UploadThroughputTestWithProcesses(serverProtocol, serverHost, serverPort, pid, processNames)
+			result, err := tests.UploadThroughputTest(serverProtocol, serverHost, serverPort, pid, processNames)
 			result.Type = model.TX_FullDuplex
 			if err != nil {
 				errors <- err
@@ -655,7 +655,7 @@ func testDNS_Burst(logfilePrefix string, logfilePostfix string, serverHost strin
 
 		for i := 0; i < countTestsToRun; i++ {
 			burstSize := fn(i)
-			result := tests.DnsBurstTestWithProcesses(url, burstSize, pid, serverHost, serverPort, transportProtocol, processNames)
+			result := tests.DnsBurstTest(url, burstSize, pid, serverHost, serverPort, transportProtocol, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
 
 			// Build row data with base values
@@ -698,7 +698,7 @@ func testDNS_Rate(logfilePrefix string, logfilePostfix string, serverHost string
 
 		for i := 0; i < countTestsToRun; i++ {
 			requestsPerSecond := fn(i)
-			result := tests.DnsRateTestWithProcesses(url, testDuration, requestsPerSecond, pid, serverHost, serverPort, transportProtocol, processNames)
+			result := tests.DnsRateTest(url, testDuration, requestsPerSecond, pid, serverHost, serverPort, transportProtocol, processNames)
 			failureRate := fmt.Sprintf("%.4f", result.FailureRate)
 
 			// Build row data with base values

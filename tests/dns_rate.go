@@ -12,11 +12,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, serverHost string, serverPort uint, transportProtocol string) model.RateTest {
-	return DnsRateTestWithProcesses(url, testDuration, desiredRequestsPerSecond, pid, serverHost, serverPort, transportProtocol, nil)
-}
-
-func DnsRateTestWithProcesses(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.RateTest {
+func DnsRateTest(url string, testDuration time.Duration, desiredRequestsPerSecond int, pid uint, serverHost string, serverPort uint, transportProtocol string, processNames []string) model.RateTest {
 	fmt.Printf("Sending %d DNS over %s requests per second for %s to %s:%d\n", desiredRequestsPerSecond, strings.ToUpper(transportProtocol), testDuration, serverHost, serverPort)
 	countRequests := 0
 	countResponses := 0

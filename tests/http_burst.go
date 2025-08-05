@@ -10,11 +10,7 @@ import (
 	"github.com/jrcamenzuli/network-performance-tester-client/util"
 )
 
-func HttpBurstTest(url string, burstSize int, pid uint, isHttps bool) model.BurstTest {
-	return HttpBurstTestWithProcesses(url, burstSize, pid, isHttps, nil)
-}
-
-func HttpBurstTestWithProcesses(url string, burstSize int, pid uint, isHttps bool, processNames []string) model.BurstTest {
+func HttpBurstTest(url string, burstSize int, pid uint, isHttps bool, processNames []string) model.BurstTest {
 	protocol := ""
 	if isHttps {
 		protocol = "HTTPS"
